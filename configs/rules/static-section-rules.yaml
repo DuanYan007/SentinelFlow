@@ -1,0 +1,143 @@
+version: static-section-rules.v1
+enabled: true
+rule_set_name: static_section_rules
+description: Section-level anomaly rules for PE static analysis v2.
+defaults:
+  enabled: true
+  risk_weight: 0.1
+  evidence_confidence: 0.9
+  anomaly_tags:
+    - section
+    - anomaly
+  thresholds:
+    high_entropy: 7.2
+    tiny_virtual_size: 32
+    tiny_raw_size: 0
+  suspicious_section_names:
+    - upx0
+    - upx1
+    - upx2
+    - .aspack
+    - .packed
+    - .petite
+    - .boom
+  abnormal_permission_combinations:
+    - execute+write
+  parser_defaults:
+    schema_version: static-analysis-v2
+    source: pefile
+categories:
+  - id: high_entropy
+    enabled: true
+    risk_weight: 0.12
+    description: Section entropy exceeds the configured threshold.
+  - id: writable_executable
+    enabled: true
+    risk_weight: 0.18
+    description: Section is both writable and executable.
+  - id: suspicious_section_name
+    enabled: true
+    risk_weight: 0.1
+    description: Section name matches known packer or suspicious patterns.
+  - id: empty_or_tiny
+    enabled: true
+    risk_weight: 0.05
+    description: Section is empty or abnormally small.
+  - id: abnormal_permission_combo
+    enabled: true
+    risk_weight: 0.08
+    description: Section permissions match risky combinations.
+rules:
+  - rule_id: SEC-HE-001
+    enabled: true
+    category: high_entropy
+    risk_weight: 0.12
+    match:
+      field: entropy
+      operator: gte
+      threshold_ref: defaults.thresholds.high_entropy
+    note: High-entropy sections may indicate packing, encryption, or embedded payloads.
+    tags:
+      - entropy
+      - packer
+      - obfuscation
+    extensions:
+      severity: medium
+      scope: section
+  - rule_id: SEC-WX-001
+    enabled: true
+    category: writable_executable
+    risk_weight: 0.18
+    match:
+      field: permissions
+      operator: contains_all
+      values:
+        - execute
+        - write
+    note: Writable and executable memory regions are often used by shellcode or unpacking stubs.
+    tags:
+      - memory
+      - shellcode
+      - unpacking
+    extensions:
+      severity: high
+      scope: section
+  - rule_id: SEC-NAME-001
+    enabled: true
+    category: suspicious_section_name
+    risk_weight: 0.1
+    match:
+      field: name
+      operator: in_ref
+      values_ref: defaults.suspicious_section_names
+      case_insensitive: true
+    note: Section name resembles known packer or obfuscator conventions.
+    tags:
+      - name
+      - packer
+    extensions:
+      severity: medium
+      scope: section
+  - rule_id: SEC-TINY-001
+    enabled: true
+    category: empty_or_tiny
+    risk_weight: 0.05
+    match:
+      any_of:
+        - field: raw_size
+          operator: eq
+          threshold_ref: defaults.thresholds.tiny_raw_size
+        - field: virtual_size
+          operator: lte
+          threshold_ref: defaults.thresholds.tiny_virtual_size
+    note: Empty or tiny sections may indicate malformed or intentionally abnormal layout.
+    tags:
+      - malformed
+      - tiny
+    extensions:
+      severity: low
+      scope: section
+  - rule_id: SEC-PERM-001
+    enabled: true
+    category: abnormal_permission_combo
+    risk_weight: 0.08
+    match:
+      field: permissions
+      operator: contains_combo_ref
+      combos_ref: defaults.abnormal_permission_combinations
+    note: Section permission combination matches a risky predefined pattern.
+    tags:
+      - permissions
+      - anomaly
+    extensions:
+      severity: medium
+      scope: section
+extensions:
+  owner: static-analysis-v2
+  compatibility:
+    schema_version: static-analysis-v2
+    extractor: pefile_extractor
+  future_fields:
+    - packer_family
+    - entropy_band
+    - section_role

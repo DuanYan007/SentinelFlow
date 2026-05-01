@@ -1,0 +1,256 @@
+version: static-import-rules.v1
+enabled: true
+rule_set_name: static_import_rules
+description: Import-table categorization and risk rules for PE static analysis v2.
+defaults:
+  enabled: true
+  risk_weight: 0.08
+  evidence_confidence: 0.95
+  matching_strategy:
+    dll_api_exact: true
+    api_fallback: true
+    prefix_match: true
+    regex_match: true
+  parser_defaults:
+    schema_version: static-analysis-v2
+    source: pefile
+categories:
+  - id: filesystem
+    enabled: true
+    risk_weight: 0.08
+    description: File enumeration, creation, overwrite, rename, or delete related APIs.
+  - id: process
+    enabled: true
+    risk_weight: 0.06
+    description: Process creation or execution related APIs.
+  - id: registry
+    enabled: true
+    risk_weight: 0.05
+    description: Registry persistence or modification related APIs.
+  - id: crypto
+    enabled: true
+    risk_weight: 0.16
+    description: Cryptographic provider, key, or encryption related APIs.
+  - id: recovery_delete
+    enabled: true
+    risk_weight: 0.2
+    description: Recovery impairment or shadow-copy interference related APIs.
+  - id: service
+    enabled: true
+    risk_weight: 0.05
+    description: Service creation, control, or persistence related APIs.
+  - id: network
+    enabled: true
+    risk_weight: 0.05
+    description: Network communication, downloading, or C2 related APIs.
+  - id: injection
+    enabled: true
+    risk_weight: 0.18
+    description: Process injection, remote memory, or thread-hijacking related APIs.
+rules:
+  - rule_id: IMP-FS-001
+    enabled: true
+    category: filesystem
+    risk_weight: 0.08
+    match:
+      dlls:
+        exact:
+          - kernel32.dll
+      apis:
+        exact:
+          - CreateFileA
+          - CreateFileW
+          - WriteFile
+          - MoveFileA
+          - MoveFileW
+          - MoveFileExA
+          - MoveFileExW
+          - FindFirstFileA
+          - FindFirstFileW
+          - FindNextFileA
+          - FindNextFileW
+    note: Filesystem APIs are commonly used for bulk file traversal and overwrite behavior.
+    tags:
+      - file_io
+      - enumeration
+    extensions:
+      severity: medium
+      scope: import
+  - rule_id: IMP-PROC-001
+    enabled: true
+    category: process
+    risk_weight: 0.06
+    match:
+      dlls:
+        exact:
+          - kernel32.dll
+          - shell32.dll
+      apis:
+        exact:
+          - CreateProcessA
+          - CreateProcessW
+          - WinExec
+          - ShellExecuteA
+          - ShellExecuteW
+    note: Process-spawn APIs are useful for launching helpers, scripts, or kill commands.
+    tags:
+      - process
+      - execution
+    extensions:
+      severity: medium
+      scope: import
+  - rule_id: IMP-REG-001
+    enabled: true
+    category: registry
+    risk_weight: 0.05
+    match:
+      dlls:
+        exact:
+          - advapi32.dll
+      apis:
+        exact:
+          - RegCreateKeyA
+          - RegCreateKeyW
+          - RegOpenKeyA
+          - RegOpenKeyW
+          - RegSetValueA
+          - RegSetValueW
+          - RegSetValueExA
+          - RegSetValueExW
+    note: Registry APIs may be used for persistence or system configuration changes.
+    tags:
+      - registry
+      - persistence
+    extensions:
+      severity: low
+      scope: import
+  - rule_id: IMP-CRYPTO-001
+    enabled: true
+    category: crypto
+    risk_weight: 0.16
+    match:
+      dlls:
+        exact:
+          - advapi32.dll
+          - bcrypt.dll
+      apis:
+        exact:
+          - CryptAcquireContextA
+          - CryptAcquireContextW
+          - CryptEncrypt
+          - CryptGenKey
+          - BCryptEncrypt
+          - BCryptGenRandom
+    note: Crypto APIs directly support key generation and data encryption operations.
+    tags:
+      - crypto
+      - encryption
+    extensions:
+      severity: high
+      scope: import
+  - rule_id: IMP-RECOVERY-001
+    enabled: true
+    category: recovery_delete
+    risk_weight: 0.2
+    match:
+      dlls:
+        exact:
+          - kernel32.dll
+      apis:
+        exact:
+          - Wow64DisableWow64FsRedirection
+    note: Recovery-related APIs may assist in disabling protections or manipulating recovery flows.
+    tags:
+      - recovery
+      - anti_recovery
+    extensions:
+      severity: high
+      scope: import
+  - rule_id: IMP-SVC-001
+    enabled: true
+    category: service
+    risk_weight: 0.05
+    match:
+      dlls:
+        exact:
+          - advapi32.dll
+      apis:
+        exact:
+          - OpenServiceA
+          - OpenServiceW
+          - OpenSCManagerA
+          - OpenSCManagerW
+          - CreateServiceA
+          - CreateServiceW
+          - StartServiceA
+          - StartServiceW
+    note: Service APIs may indicate persistence or privileged helper deployment.
+    tags:
+      - service
+      - persistence
+    extensions:
+      severity: low
+      scope: import
+  - rule_id: IMP-NET-001
+    enabled: true
+    category: network
+    risk_weight: 0.05
+    match:
+      dlls:
+        exact:
+          - wininet.dll
+          - ws2_32.dll
+          - winhttp.dll
+          - urlmon.dll
+      apis:
+        exact:
+          - InternetOpenA
+          - InternetOpenW
+          - InternetOpenUrlA
+          - InternetOpenUrlW
+          - URLDownloadToFileA
+          - URLDownloadToFileW
+          - connect
+          - send
+          - recv
+          - socket
+    note: Network APIs may be used for C2, key exchange, or payload delivery.
+    tags:
+      - network
+      - c2
+    extensions:
+      severity: low
+      scope: import
+  - rule_id: IMP-INJECT-001
+    enabled: true
+    category: injection
+    risk_weight: 0.18
+    match:
+      dlls:
+        exact:
+          - kernel32.dll
+      apis:
+        exact:
+          - VirtualAllocEx
+          - WriteProcessMemory
+          - CreateRemoteThread
+          - QueueUserAPC
+        prefix:
+          - Nt
+          - Zw
+    note: Injection-oriented APIs may indicate remote memory manipulation or process takeover.
+    tags:
+      - injection
+      - remote_memory
+    extensions:
+      severity: high
+      scope: import
+extensions:
+  owner: static-analysis-v2
+  compatibility:
+    schema_version: static-analysis-v2
+    extractor: pefile_extractor
+  future_fields:
+    - family_bias
+    - campaign_note
+    - sample_prevalence

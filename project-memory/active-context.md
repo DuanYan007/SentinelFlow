@@ -1,0 +1,201 @@
+# Active Context
+
+## Current Stage
+- The project has entered round-1 implementation for the phase-1 skeleton.
+- The round-1 skeleton for `models + core + config + recorder` has been written.
+- A placeholder single-sample workflow can already emit a canonical JSON result.
+- The local isolated Python environment for the project has now been prepared.
+- The round-2 skeleton for `ingest + intel + agent` has been integrated and validated.
+- The round-3 skeleton for `static_analysis + verdict` has been integrated and validated.
+- The round-4 implementation for safe `dynamic_analysis` and `batch` has been integrated and validated.
+- VT querying is enabled via a local ignored secret file.
+- The first CLI command, `validate-result`, has been implemented and validated against an existing workflow result JSON.
+- The `single` CLI command has been implemented and validated on a real PE sample.
+- The first `static_analysis_v2` data model skeleton has been added under `models/`.
+- The first standalone `pefile -> static_analysis_v2` extractor skeleton has been implemented and validated on a real PE sample.
+- The first YAML rule data files for static-analysis v2 section and import matching have been added and validated.
+- The first `static_analysis/rule_loader.py` has been implemented and validated against both YAML rule files.
+- The first generic static-analysis rule matcher has been implemented and validated on real extracted section/import candidates.
+- The `pefile` v2 extractor now writes section/import rule hits back into categorized output and normalized features.
+- Static-analysis v2 now includes score breakdown, config-controlled enablement, and parallel output through the existing static-analysis service.
+- Static-analysis v2 is now validated in final result JSONs, surfaced in CLI single-run output, and referenced by an experimental Agent decision hint.
+- Static-analysis v2 now includes multi-tool integration for `strings` and best-effort `DIE` output collection.
+- A full-corpus static-only experiment has now been executed and persisted to disk, along with experiment and single-sample trace documents.
+
+## Immediate Priorities
+- Decide the next implementation focus:
+  - add a batch CLI entrypoint
+  - continue the static-analysis v2 chain with stronger DIE handling and broader Agent orchestration
+  - refine dynamic-analysis environment adapter
+  - add tests/schema validation
+- VT credentials are currently stored in an ignored local secret file under `configs/secrets/`.
+- Decide whether to keep or clean generated `__pycache__` directories from local validation runs.
+
+## Open Questions
+- Exact technology stack is not fixed yet.
+- Sample splitting strategy is not fixed yet.
+- Handling strategy for suspicious outputs beyond one extra dynamic pass may need refinement later.
+- Static tooling is mostly settled for phase 1:
+  - `pefile` in project-local `.venv`
+  - system `strings`
+  - local extracted `DIE`
+- Concrete dynamic tool names are not fixed yet.
+- Concrete dynamic environment is not fixed yet.
+- Phase-2 priority is not fixed yet; current leaning is:
+  - stronger Agent capability
+  - larger batch experimentation
+
+## Working Rule For Future Sessions
+- If the user asks for design/planning, continue with concise option-based Q&A.
+- If the user asks for implementation, stop first and ask for confirmation before editing code.
+
+## Last Meaningful Update
+- Added project memory mechanism and persisted current experiment decisions.
+- Added project-root agent rules to make memory-first startup behavior explicit.
+- Recorded complete JSON output preference and stepwise execution progression.
+- Recorded single-sample and small-batch sample-selection strategy.
+- Recorded phase-1 rule: prioritize full workflow execution over early termination.
+- Recorded tentative phase-2 priorities while keeping final choice open until phase 1 completes.
+- Recorded the next requested planning output: phase-1 implementation checklist and module breakdown.
+- Recorded the next requested planning output: detailed JSON schema and inter-module data flow.
+- Recorded the next requested planning output: trace fields plus static and dynamic scoring rules.
+- Recorded the next requested planning output: verdict rules, full JSON example, and phase-1 module interfaces.
+- Recorded the next requested planning output: formal JSON schema, Agent decision table, and minimum viable tool candidates.
+- Preparing formalized phase-1 planning artifacts for JSON schema, Agent decision rules, and tool selection guidance.
+- Wrote the formal phase-1 planning document, including error handling and threshold draft.
+- Refined the formal plan with verdict threshold draft, fallback matrix, and dynamic environment requirements.
+- Added normalization rules for VT results, static features, and dynamic events.
+- Added phase-1 directory structure, result naming rules, and single-to-batch execution flow.
+- Added phase-1 batch summary fields, logging guidance, and rerun/de-duplication rules.
+- Added phase-1 config design, status/error codes, and experimental metrics.
+- Added batch summary formulas, heuristic scoring weights, and Agent prompt/input format guidance.
+- Added the phase-1 incremental implementation plan, test plan, and repository structure draft.
+- Added the phase-1 CLI design, configuration examples, and external result report format.
+- Shifted the next planning step to phase-1 code skeleton design without writing code yet.
+- Added core data model, single-sample workflow, and Agent layer skeleton drafts to the formal plan.
+- Added static-analysis, dynamic-analysis, and recorder/batch skeleton drafts to the formal plan.
+- Added verdict, CLI, and core/config/models relationship drafts to the formal plan.
+- Added the pre-implementation final checklist, phase-1 MVP definition, and module landing order.
+- Added the implementation summary, first coding round task package, and environment/resource checklist.
+- Added the round-1 file breakdown, interface signature draft, and pre-coding confirmation page.
+- Added refined round-1 interfaces/models and the local environment readiness checklist.
+- Added the step-by-step local environment check, core object refinement notes, and final pre-coding questionnaire.
+- Implemented round-1 Python skeleton files for `models`, `core`, `config`, and `recorder`.
+- Added `workflow_skeleton.py` and validated that it can emit a canonical placeholder JSON result.
+- Recorded the environment-management decision to use `uv` and a project-local virtual environment.
+- Recorded current static-tool preparation status on Ubuntu 24.04.
+- Implemented round-2 Python skeleton files for `ingest`, `intel`, and `agent`.
+- Added local YAML configs and validated that the workflow now computes hashes and records agent trace items.
+- Implemented round-3 Python skeleton files for `static_analysis` and `verdict`.
+- Validated that the workflow now emits real static features, a static risk score, and a non-placeholder verdict.
+- Ran a 10-entry static-analysis inspection; 9 PE samples completed static analysis and one `.obsidian` directory exposed a future batch input-filtering issue.
+- Implemented safe dynamic-analysis placeholder and batch runner.
+- Validated one VT-enabled sample and a 5-sample batch run; batch filtering skipped one non-file input and produced a summary JSON.
+- Implemented the `ransom-lab validate-result` CLI path.
+- Validated the new CLI against `results/wf-20260430T032334Z-90c533d7__e10cae894e88__single.json`; the command returned `OK`.
+- Implemented the `ransom-lab single` CLI path.
+- Validated the new CLI on `ransomware/fe81c5caa0e269c1cbbd0aca9557677c4f57829d621f2f21768728c92e4f0498.exe`.
+- The run produced `results/wf-20260430T064459Z-3a09963e__fe81c5caa0e2__single.json` with `VERDICT malicious` and `STATUS completed_degraded`.
+- Validated the new single-run JSON again with `validate-result`; the command returned `OK`.
+- Added `src/models/static_analysis_v2.py` with the first unified static-analysis v2 structure:
+  - `tool_outputs`
+  - `raw_evidence`
+  - `normalized_features`
+  - `score_breakdown`
+  - `summary`
+- Exported the new top-level model from `src/models/__init__.py`.
+- Validated the new model with Python syntax check and default-object serialization.
+- Added `src/static_analysis/pefile_extractor.py` as the first standalone static-analysis v2 extractor.
+- Validated the extractor on `ransomware/fe81c5caa0e269c1cbbd0aca9557677c4f57829d621f2f21768728c92e4f0498.exe`.
+- The extractor produced:
+  - `status=ok`
+  - `schema_version=static-analysis-v2`
+  - `11` sections
+  - `142` imports
+  - `13` key raw-evidence records
+- Current scope remains structure-first:
+  - no YAML rule loading yet
+  - no v2 scoring integration yet
+  - not wired into the main workflow yet
+- Added v2 rule-data files:
+  - `configs/rules/static-section-rules.yaml`
+  - `configs/rules/static-import-rules.yaml`
+- Validated both YAML files with local parsing:
+  - section rules: `5` categories, `5` rules
+  - import rules: `8` categories, `8` rules
+- Added `src/static_analysis/rule_loader.py`.
+- Validated the rule loader against local config rules:
+  - section rules version: `static-section-rules.v1`
+  - import rules version: `static-import-rules.v1`
+  - section counts: `5` categories, `5` rules
+  - import counts: `8` categories, `8` rules
+- Added `src/static_analysis/rule_matcher.py`.
+- Validated the generic matcher on a real PE sample's extracted candidates:
+  - section rule hits: `3`
+  - import rule hits: `8`
+  - section hit categories: `empty_or_tiny`, `high_entropy`
+  - import hit categories: `filesystem`, `process`, `registry`, `service`
+- Integrated section/import rule hits back into `src/static_analysis/pefile_extractor.py`.
+- Validated the integrated extractor on a real PE sample:
+  - import categories written back: `filesystem`, `process`, `registry`, `service`
+  - imports now carry `category + matched_rule_id`
+  - `normalized_features.import_features` now aggregates categorized hits
+  - summary key hits now include section and import rule hits
+- Added static-analysis v2 config controls:
+  - `enable_v2_output`
+  - `rules_dir`
+  - `section_rules_file`
+  - `import_rules_file`
+- Added a compatibility field on v1 static result:
+  - `static_analysis.v2`
+- Added v2 rule-based score breakdown generation in `pefile_extractor.py`.
+- Integrated v2 extraction into `static_analysis/service.py` in parallel with existing v1 output.
+- Validated end-to-end static service behavior on a real PE sample:
+  - v1 status: `ok`
+  - v1 static score: `0.17`
+  - v2 output present: `true`
+  - v2 static score: `0.401`
+  - v2 import categories: `filesystem`, `process`, `registry`, `service`
+  - v2 score normalization: `rule_hits_to_modules_then_weighted_caps`
+  - v2 rule-score item count: `7`
+- Extended `validate_result_dict()` to validate `static_analysis.v2` core structure.
+- Updated `ransom-lab single` to validate its own output JSON before returning success and to print `STATIC_V2`.
+- Updated Agent static-stage trace generation to include:
+  - `static_v2_risk_score`
+  - `static_v2_import_categories`
+  - `suggested_next_action`
+- Validated a new single-sample workflow result:
+  - output file: `results/wf-20260501T072733Z-992d03b2__fe81c5caa0e2__single.json`
+  - CLI printed `STATIC_V2 0.401`
+  - explicit `validate-result` returned `OK`
+  - final JSON includes the v2-aware Agent hint `collect_more_static_and_dynamic_evidence`
+- Extended `static_analysis/pefile_extractor.py` to integrate `strings` into v2:
+  - `tool_outputs.strings`
+  - strings-based `raw_evidence`
+  - summary key hits
+- Extended `static_analysis/pefile_extractor.py` to integrate best-effort `DIE` into v2:
+  - `tool_outputs.die`
+  - timeout-safe execution
+  - timeout/error captured as structured status instead of blocking the workflow
+- Validated on a real PE sample:
+  - `tools_used`: `pefile`, `strings`
+  - v2 `tool_coverage`: `pefile`, `strings`
+  - `tool_outputs.strings.status=ok`
+  - `tool_outputs.die.status=partial`
+  - `tool_outputs.die.summary=die execution timed out`
+  - v2 `raw_evidence` count increased to `26`
+- Added a dedicated static-only experiment runner:
+  - `src/batch/static_experiment.py`
+- Executed a full static-only corpus run:
+  - batch id: `static-batch-20260501T074257Z-c91307`
+  - processed file samples: `169`
+  - skipped non-file entries: `1`
+  - static status counts: `ok=168`, `error=1`
+  - v2 present count: `168`
+  - mean v2 risk score: `0.294`
+- Persisted artifacts:
+  - per-sample static results under `results/static-experiments/static-batch-20260501T074257Z-c91307/`
+  - summary JSON under `results/static-experiments/summaries/`
+- Added experiment documentation:
+  - `docs/static-analysis-experiment-record.md`
+  - `docs/static-analysis-single-sample-trace.md`

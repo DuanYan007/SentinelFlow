@@ -1,0 +1,14 @@
+enabled: false
+environment_type: windows_vm
+snapshot_name: clean-baseline
+network_mode: host_only
+runner_command: ""
+event_log_path: ""
+observation_window_sec: 60
+process_event_enabled: true
+file_event_enabled: true
+bulk_create_threshold: 20
+bulk_modify_threshold: 20
+bulk_rename_threshold: 10
+high_write_density_threshold: medium
+timeout_sec: 90
