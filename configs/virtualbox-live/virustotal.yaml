@@ -1,0 +1,11 @@
+enabled: true
+api_key: ""
+api_key_file: configs/secrets/virustotal.key
+query_hash_priority:
+  - sha256
+  - sha1
+  - md5
+timeout_sec: 20
+retry_enabled: true
+retry_count: 1
+rate_limit_sleep_sec: 15

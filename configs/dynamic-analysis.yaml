@@ -1,9 +1,15 @@
 enabled: false
 environment_type: windows_vm
+adapter_name: sample_replay_adapter
 snapshot_name: clean-baseline
 network_mode: host_only
 runner_command: ""
 event_log_path: ""
+replay_artifact_dir: staging/dynamic-replay
+fallback_adapters:
+  - event_log_adapter
+allow_agent_override: true
+allow_sample_execution: false
 observation_window_sec: 60
 process_event_enabled: true
 file_event_enabled: true

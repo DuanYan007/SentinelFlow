@@ -1,0 +1,52 @@
+enabled: true
+environment_type: windows_vm
+adapter_name: sample_replay_adapter
+snapshot_name: clean-baseline
+network_mode: host_only
+runner_command: ""
+event_log_path: ""
+replay_artifact_dir: staging/dynamic-replay
+real_runs_dir: data
+fallback_adapters:
+  - event_log_adapter
+allow_agent_override: true
+allow_sample_execution: true
+enable_real_vm_execution: true
+vm_platform: virtualbox
+vm_name: windows-lab
+vm_guest_ip: 192.168.56.10
+vm_username: analyst
+vm_password: 7566
+vm_control_username: collector
+vm_control_password: 7566
+vm_sample_username: analyst
+vm_sample_password: 7566
+vm_guest_sample_dir: C:\Samples
+vm_guest_logs_dir: C:\ProgramData\SentinelFlow\Runs
+vm_guest_tools_dir: C:\Tools
+vm_snapshot_restore_command: >-
+  VBoxManage snapshot "{vm_name}" restore "{snapshot_name}"
+vm_start_command: >-
+  VBoxManage startvm "{vm_name}" --type headless
+vm_ready_check_command: >-
+  VBoxManage guestcontrol "{vm_name}" run --exe "C:\Windows\System32\cmd.exe" --username "{vm_control_username}" --password "{vm_control_password}" -- cmd.exe /c echo guest_ready
+vm_copy_sample_command: >-
+  VBoxManage guestcontrol "{vm_name}" copyto "{sample_path}" "{guest_sample_path}" --username "{vm_control_username}" --password "{vm_control_password}"
+vm_start_capture_command: >-
+  VBoxManage guestcontrol "{vm_name}" run --exe "C:\Windows\System32\cmd.exe" --username "{vm_control_username}" --password "{vm_control_password}" -- cmd.exe /c call "{vm_guest_tools_dir}\start_capture.bat" "{vm_guest_logs_dir}" "{sample_sha256}"
+vm_execute_sample_command: >-
+  VBoxManage guestcontrol "{vm_name}" run --exe "{guest_sample_path}" --username "{vm_sample_username}" --password "{vm_sample_password}" -- "{guest_sample_path}"
+vm_stop_capture_command: >-
+  VBoxManage guestcontrol "{vm_name}" run --exe "C:\Windows\System32\cmd.exe" --username "{vm_control_username}" --password "{vm_control_password}" -- cmd.exe /c call "{vm_guest_tools_dir}\stop_capture.bat" "{vm_guest_logs_dir}" "{sample_sha256}"
+vm_export_logs_command: >-
+  VBoxManage guestcontrol "{vm_name}" run --exe "C:\Windows\System32\cmd.exe" --username "{vm_control_username}" --password "{vm_control_password}" -- cmd.exe /c call "{vm_guest_tools_dir}\export_minimal.bat" "{vm_guest_logs_dir}" "{sample_sha256}"
+vm_collect_logs_command: >-
+  VBoxManage guestcontrol "{vm_name}" copyfrom "{vm_guest_logs_dir}\{sample_sha256}" "{run_dir}" --username "{vm_control_username}" --password "{vm_control_password}"
+observation_window_sec: 60
+process_event_enabled: true
+file_event_enabled: true
+bulk_create_threshold: 20
+bulk_modify_threshold: 20
+bulk_rename_threshold: 10
+high_write_density_threshold: medium
+timeout_sec: 90

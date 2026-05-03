@@ -2,6 +2,7 @@ from core.enums import ModuleStatus, WorkflowStage
 from core.time_utils import now_iso
 from models.agent_trace_item import AgentTraceItem
 from models.analysis_context import AnalysisContext
+from .planner import build_agent_plan
 
 
 def _append_trace(
@@ -27,23 +28,61 @@ def _append_trace(
     context.agent_trace.append(item)
 
 
+def _materialize_plan(context: AnalysisContext, stage: str) -> tuple[AnalysisContext, object]:
+    plan = build_agent_plan(context, stage)
+    context.agent_execution.current_strategy = plan.strategy_name
+    context.agent_execution.active_stage = stage
+    context.agent_execution.stage_plans[stage] = {
+        "stage": plan.stage,
+        "objective": plan.objective,
+        "strategy_name": plan.strategy_name,
+        "selected_skills": plan.selected_skills,
+        "selected_tools": plan.selected_tools,
+        "selected_sop_id": plan.selected_sop_id,
+        "candidate_sop_ids": plan.candidate_sop_ids,
+        "suggested_next_action": plan.suggested_next_action,
+        "rationale": plan.rationale,
+        "llm_ready_prompt_input": plan.llm_ready_prompt_input,
+        "execution_directives": {
+            key: (
+                value.__dict__
+                if hasattr(value, "__dict__") and value.__class__.__name__ == "AgentDynamicRequest"
+                else value
+            )
+            for key, value in plan.execution_directives.items()
+        },
+    }
+    dynamic_request = plan.execution_directives.get("dynamic_request")
+    if dynamic_request is not None:
+        context.agent_execution.dynamic_request = dynamic_request
+    return context, plan
+
+
 def run_agent_decision(context: AnalysisContext, stage: str) -> AnalysisContext:
     if stage == WorkflowStage.HASH_INTEL.value:
+        context, plan = _materialize_plan(context, stage)
         input_summary = {
             "vt_status": context.threat_intel.status,
             "vt_signal": context.threat_intel.vt_signal,
             "matched": context.threat_intel.matched,
+            "agent_objective": plan.objective,
+            "strategy_name": plan.strategy_name,
+            "selected_sop_id": plan.selected_sop_id,
+            "candidate_sop_ids": plan.candidate_sop_ids,
+            "selected_skills": plan.selected_skills,
+            "selected_tools": plan.selected_tools,
         }
         _append_trace(
             context,
             stage="agent_decision_1",
-            decision="continue_to_static",
-            reason="Phase 1 requires static evidence collection after threat-intelligence handling.",
+            decision=plan.suggested_next_action,
+            reason=plan.rationale,
             input_summary=input_summary,
         )
         return context
 
     if stage == WorkflowStage.STATIC_ANALYSIS.value:
+        context, plan = _materialize_plan(context, stage)
         v2_data = context.static_analysis.v2 if isinstance(context.static_analysis.v2, dict) else {}
         v2_risk_score = v2_data.get("risk_score")
         v2_categories = sorted(
@@ -70,32 +109,65 @@ def run_agent_decision(context: AnalysisContext, stage: str) -> AnalysisContext:
             "static_v2_risk_score": v2_risk_score,
             "static_v2_import_categories": v2_categories,
             "suggested_next_action": next_action,
+            "agent_objective": plan.objective,
+            "strategy_name": plan.strategy_name,
+            "selected_sop_id": plan.selected_sop_id,
+            "candidate_sop_ids": plan.candidate_sop_ids,
+            "selected_skills": plan.selected_skills,
+            "selected_tools": plan.selected_tools,
+            "dynamic_request": context.agent_execution.dynamic_request.__dict__,
         }
         _append_trace(
             context,
             stage="agent_decision_2",
-            decision="continue_to_final_verdict",
+            decision=plan.suggested_next_action,
             reason=(
-                "Static evidence has been collected and the current round ends at verdict generation before dynamic integration. "
-                f"V2 experimental suggestion: {next_reason}"
+                f"{plan.rationale} V2 experimental suggestion: {next_reason}"
             ),
             input_summary=input_summary,
             confidence=0.75,
         )
         return context
 
+    if stage == WorkflowStage.DYNAMIC_ANALYSIS.value:
+        context, plan = _materialize_plan(context, stage)
+        input_summary = {
+            "dynamic_status": context.dynamic_analysis.status,
+            "dynamic_risk_score": context.dynamic_analysis.risk_score,
+            "dynamic_matched_features": context.dynamic_analysis.matched_features,
+            "agent_objective": plan.objective,
+            "strategy_name": plan.strategy_name,
+            "selected_sop_id": plan.selected_sop_id,
+            "candidate_sop_ids": plan.candidate_sop_ids,
+            "selected_skills": plan.selected_skills,
+            "selected_tools": plan.selected_tools,
+            "dynamic_adapter_selected": context.dynamic_analysis.adapter_selected,
+        }
+        _append_trace(
+            context,
+            stage="agent_decision_3",
+            decision=plan.suggested_next_action,
+            reason=plan.rationale,
+            input_summary=input_summary,
+            confidence=0.72,
+        )
+        return context
+
     if stage == WorkflowStage.FINAL_VERDICT.value:
+        context, plan = _materialize_plan(context, stage)
         input_summary = {
             "static_status": context.static_analysis.status,
             "dynamic_status": context.dynamic_analysis.status,
             "workflow_status": context.workflow_status.status,
             "verdict_label": context.verdict.final_label,
+            "strategy_name": plan.strategy_name,
+            "selected_sop_id": plan.selected_sop_id,
         }
         _append_trace(
             context,
             stage="final_verdict",
-            decision="produce_final_verdict",
-            reason="The workflow has enough normalized evidence for the current implementation round to emit a verdict.",
+            decision=plan.suggested_next_action,
+            reason=plan.rationale,
             input_summary=input_summary,
             confidence=0.6,
         )

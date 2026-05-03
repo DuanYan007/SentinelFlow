@@ -1,0 +1,5 @@
+log_level: INFO
+structured_logging: true
+log_dir: logs
+retain_debug_logs: false
+separate_agent_log: true

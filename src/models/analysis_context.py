@@ -1,6 +1,7 @@
 from dataclasses import asdict, dataclass, field
 
 from core.constants import DEFAULT_PHASE_NAME
+from .agent_execution import AgentExecutionState
 from .agent_trace_item import AgentTraceItem
 from .dynamic_result import DynamicAnalysisResult
 from .sample_info import SampleInfo
@@ -15,6 +16,7 @@ from .workflow_status import WorkflowStatus, create_default_workflow_status
 class AnalysisContext:
     sample: SampleInfo
     threat_intel: ThreatIntelResult
+    agent_execution: AgentExecutionState = field(default_factory=AgentExecutionState)
     agent_trace: list[AgentTraceItem] = field(default_factory=list)
     static_analysis: StaticAnalysisResult = field(default_factory=StaticAnalysisResult)
     dynamic_analysis: DynamicAnalysisResult = field(default_factory=DynamicAnalysisResult)
@@ -35,4 +37,3 @@ def create_empty_analysis_context(sample_path: str, phase_name: str = DEFAULT_PH
         runtime=runtime,
         workflow_status=create_default_workflow_status(),
     )
-

@@ -4,7 +4,7 @@ observation_window_sec: 60
 allow_auto_rerun: true
 max_auto_rerun: 1
 enable_batch_dedup: true
+enable_v2_verdict_signal: true
 results_dir: results
 logs_dir: logs
 staging_dir: staging
-

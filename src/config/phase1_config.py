@@ -16,7 +16,7 @@ class Phase1Config:
     allow_auto_rerun: bool = True
     max_auto_rerun: int = 1
     enable_batch_dedup: bool = True
+    enable_v2_verdict_signal: bool = True
     results_dir: str = DEFAULT_RESULTS_DIR
     logs_dir: str = DEFAULT_LOGS_DIR
     staging_dir: str = DEFAULT_STAGING_DIR
-

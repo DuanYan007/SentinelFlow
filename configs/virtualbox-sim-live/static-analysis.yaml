@@ -1,0 +1,42 @@
+enabled_tools:
+  - pefile
+  - strings
+  - die
+enable_v2_output: true
+entropy_threshold: 7.2
+high_entropy_section_count_threshold: 2
+strings_binary: /usr/bin/strings
+die_binary: /home/duan/ransom-lab/tools/bin/squashfs-root/usr/bin/die
+rules_dir: rules
+section_rules_file: static-section-rules.yaml
+import_rules_file: static-import-rules.yaml
+string_keyword_sets:
+  ransom_note:
+    - decrypt
+    - bitcoin
+    - recover your files
+    - your files
+  extension_change:
+    - .locked
+    - .encrypted
+    - .crypt
+    - .enc
+  backup_delete:
+    - vssadmin
+    - delete shadows
+    - wmic shadowcopy delete
+  recovery_disable:
+    - bcdedit
+    - recoveryenabled
+    - bootstatuspolicy
+  onion_or_wallet:
+    - .onion
+    - wallet
+    - monero
+    - btc
+score_weights:
+  pe_score: 0.3
+  import_score: 0.3
+  string_score: 0.4
+medium_score_threshold: 0.3
+high_score_threshold: 0.6

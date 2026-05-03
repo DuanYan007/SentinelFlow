@@ -18,9 +18,29 @@ def _static_signal(context: AnalysisContext, bundle: RuntimeConfigBundle) -> str
     return "low"
 
 
+def _static_v2_score(context: AnalysisContext) -> float | None:
+    v2 = context.static_analysis.v2
+    if not isinstance(v2, dict):
+        return None
+    score = v2.get("risk_score")
+    if isinstance(score, (int, float)):
+        return float(score)
+    return None
+
+
+def _score_to_signal(score: float, bundle: RuntimeConfigBundle) -> str:
+    if score >= bundle.static_analysis.high_score_threshold:
+        return "high"
+    if score >= bundle.static_analysis.medium_score_threshold:
+        return "medium"
+    return "low"
+
+
 def run_verdict(context: AnalysisContext, bundle: RuntimeConfigBundle) -> AnalysisContext:
     vt_signal = _vt_signal(context)
     static_signal = _static_signal(context, bundle)
+    static_v2_score = _static_v2_score(context) if bundle.phase1.enable_v2_verdict_signal else None
+    static_v2_signal = _score_to_signal(static_v2_score, bundle) if static_v2_score is not None else "unknown"
     dynamic_score = context.dynamic_analysis.risk_score
     if dynamic_score >= bundle.static_analysis.high_score_threshold:
         dynamic_signal = "high"
@@ -42,16 +62,26 @@ def run_verdict(context: AnalysisContext, bundle: RuntimeConfigBundle) -> Analys
         decision_basis.append("VT returned no match")
 
     decision_basis.append(f"Static risk score={context.static_analysis.risk_score:.3f} ({static_signal})")
+    if static_v2_score is not None:
+        decision_basis.append(f"Static v2 risk score={static_v2_score:.3f} ({static_v2_signal})")
     if context.dynamic_analysis.status == "skipped":
         decision_basis.append("Dynamic analysis was skipped by config")
     else:
         decision_basis.append(f"Dynamic risk score={dynamic_score:.3f} ({dynamic_signal})")
 
     has_static_indicators = bool(context.static_analysis.matched_features)
+    effective_static_signal = static_signal
+    if static_v2_score is not None:
+        if static_v2_signal == "high" or static_signal == "high":
+            effective_static_signal = "high"
+        elif static_v2_signal == "medium" or static_signal == "medium":
+            effective_static_signal = "medium"
+        else:
+            effective_static_signal = "low"
 
-    if vt_signal == "high" or static_signal == "high" or dynamic_signal == "high":
+    if vt_signal == "high" or effective_static_signal == "high" or dynamic_signal == "high":
         label = FinalLabel.MALICIOUS.value
-    elif vt_signal == "medium" or static_signal == "medium" or dynamic_signal == "medium":
+    elif vt_signal == "medium" or effective_static_signal == "medium" or dynamic_signal == "medium":
         label = FinalLabel.SUSPICIOUS.value
     elif has_static_indicators:
         label = FinalLabel.SUSPICIOUS.value
@@ -61,8 +91,11 @@ def run_verdict(context: AnalysisContext, bundle: RuntimeConfigBundle) -> Analys
         label = FinalLabel.BENIGN.value
 
     vt_score_map = {"high": 1.0, "medium": 0.6, "low": 0.2, "unknown": 0.0}
+    effective_static_score = context.static_analysis.risk_score
+    if static_v2_score is not None:
+        effective_static_score = max(effective_static_score, static_v2_score)
     final_score = round(
-        min(1.0, 0.3 * vt_score_map.get(vt_signal, 0.0) + 0.3 * context.static_analysis.risk_score + 0.4 * dynamic_score),
+        min(1.0, 0.3 * vt_score_map.get(vt_signal, 0.0) + 0.3 * effective_static_score + 0.4 * dynamic_score),
         3,
     )
 

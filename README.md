@@ -23,12 +23,13 @@
 
 `sample -> hash intelligence -> Agent -> static/dynamic analysis -> final classification`
 
-其中，第一阶段主要在做：
+其中，第一阶段当前已经推进到：
 
 - 端到端流程验证
 - 静态分析能力建设
-- 结构化证据表达
+- 真实动态采集链路打通
 - Agent 决策输入准备
+- Windows VM 采集面加固
 
 ## 当前已实现内容
 
@@ -41,7 +42,7 @@
 - VirusTotal 查询
 - Agent 决策 trace
 - 静态分析
-- 动态分析占位
+- 动态分析接入口
 - verdict 生成
 - JSON 结果落盘
 
@@ -85,7 +86,31 @@
 - 模块级分数贡献
 - 与 v1 并行输出
 
-### 4. CLI
+### 4. 动态分析链路
+
+当前动态分析已不再只是占位，已经具备以下能力：
+
+- `dynamic-replay.v1` 工件构建
+- `dynamic-experiment` 批量动态评分
+- `sample_replay_adapter`
+- `event_log_adapter`
+- `import-sysmon-log`
+- `import-procmon-log`
+- `import-real-run`
+- `run-real-dynamic-pipeline`
+- `collect-real-dynamic`
+
+同时，项目已经完成一条真实 Windows VM 采集路线的关键闭环：
+
+- VirtualBox + Guest Additions
+- Windows Guest 内 Sysmon + Procmon
+- Guest 日志导出
+- Host 回传
+- 原始日志到 replay artifact 的转换
+- workflow 自动消费真实动态日志
+- 第一阶段采集面加固
+
+### 5. CLI
 
 当前已实现的 CLI 能力：
 
@@ -98,7 +123,7 @@
 PYTHONPATH=src .venv/bin/python -m cli --help
 ```
 
-### 5. 批量静态实验
+### 6. 批量静态实验
 
 项目已执行过一轮全样本静态分析实验。
 
@@ -119,6 +144,10 @@ PYTHONPATH=src .venv/bin/python -m cli --help
 
 - [docs/static-analysis-experiment-record.md](/home/duan/ransom-lab/docs/static-analysis-experiment-record.md)
 - [docs/static-analysis-single-sample-trace.md](/home/duan/ransom-lab/docs/static-analysis-single-sample-trace.md)
+- [docs/virtualbox-download-deployment-guide.md](/home/duan/ransom-lab/docs/virtualbox-download-deployment-guide.md)
+- [docs/virtualbox-real-dynamic-setup.md](/home/duan/ransom-lab/docs/virtualbox-real-dynamic-setup.md)
+- [docs/windows-vm-dynamic-sop.md](/home/duan/ransom-lab/docs/windows-vm-dynamic-sop.md)
+- [docs/windows-vm-phase1-hardening.md](/home/duan/ransom-lab/docs/windows-vm-phase1-hardening.md)
 
 ## 目录结构
 
@@ -129,7 +158,8 @@ src/
   cli/                 命令行入口
   config/              配置模型与加载
   core/                通用常量、枚举、时间与路径工具
-  dynamic_analysis/    动态分析占位与后续扩展入口
+  dynamic_analysis/    动态分析评分、适配器与 replay 工件
+  dynamic_collection/  真实日志导入、合并与 Host 编排
   ingest/              样本输入与哈希
   intel/               威胁情报查询
   models/              数据模型
@@ -169,17 +199,17 @@ project-memory/
 
 当前系统仍处于研究原型阶段，主要限制包括：
 
-- 动态分析尚未接入稳定的 VM/sandbox 执行环境
 - `DIE` 在当前环境中还不是稳定快速的信号源
 - Agent 决策目前仍以规则与实验性建议为主
 - 最终的“自主 SOP/skill 调度”还在持续设计中
+- Windows VM 动态链路已打通，但仍在继续固化受保护日志目录、控制账户与自动化稳定性
 
 ## 后续方向
 
 下一阶段的重点包括：
 
 - 批量 CLI 完善
-- 动态分析环境接入
+- 动态分析环境稳定化与自动化
 - Agent SOP/skill 调度骨架
 - 让 OpenAI 作为决策中枢，对多种分析路径进行编排
 - 完善实验基准、回归与可复现性

@@ -21,26 +21,32 @@
 - Static-analysis v2 is now validated in final result JSONs, surfaced in CLI single-run output, and referenced by an experimental Agent decision hint.
 - Static-analysis v2 now includes multi-tool integration for `strings` and best-effort `DIE` output collection.
 - A full-corpus static-only experiment has now been executed and persisted to disk, along with experiment and single-sample trace documents.
+- The verdict module now consumes `static_analysis.v2` as an experimental static signal in the main single-sample workflow.
 
 ## Immediate Priorities
-- Decide the next implementation focus:
-  - add a batch CLI entrypoint
-  - continue the static-analysis v2 chain with stronger DIE handling and broader Agent orchestration
-  - refine dynamic-analysis environment adapter
-  - add tests/schema validation
+- Consolidate the protected Windows VM dynamic collection path:
+  - `collector` controls capture/export/copy-back
+  - `analyst` executes samples
+  - protected guest log root is `C:\ProgramData\SentinelFlow\Runs`
+- Continue stabilizing the real dynamic chain:
+  - convert protected guest logs into host `data/<sample_sha256>/`
+  - preserve replay-artifact generation under `staging/dynamic-replay/`
+- Refresh docs and memory to remove outdated path assumptions and pre-integration wording.
+- Prepare a clean push boundary:
+  - keep `data/`, `results/`, `ransomware/`, `.venv/`, `tools/`, `configs/secrets/` out of git
 - VT credentials are currently stored in an ignored local secret file under `configs/secrets/`.
-- Decide whether to keep or clean generated `__pycache__` directories from local validation runs.
 
 ## Open Questions
-- Exact technology stack is not fixed yet.
 - Sample splitting strategy is not fixed yet.
 - Handling strategy for suspicious outputs beyond one extra dynamic pass may need refinement later.
 - Static tooling is mostly settled for phase 1:
   - `pefile` in project-local `.venv`
   - system `strings`
   - local extracted `DIE`
-- Concrete dynamic tool names are not fixed yet.
-- Concrete dynamic environment is not fixed yet.
+- The remaining dynamic questions are now about stabilization, not platform choice:
+  - full protected-log-root migration
+  - export robustness
+  - automated normalization after copy-back
 - Phase-2 priority is not fixed yet; current leaning is:
   - stronger Agent capability
   - larger batch experimentation
@@ -50,6 +56,40 @@
 - If the user asks for implementation, stop first and ask for confirmation before editing code.
 
 ## Last Meaningful Update
+- Real Windows VM dynamic collection is no longer only planned:
+  - VirtualBox + Guest Additions route validated
+  - Sysmon + Procmon guest export validated
+  - host copy-back validated
+  - real exported logs consumed by the workflow
+- Host-side default real-run directory has been moved to:
+  - `data/`
+- First-stage guest hardening has been implemented and validated:
+  - `collector`
+  - protected `C:\Tools`
+  - protected `C:\ProgramData\SentinelFlow\Runs`
+- Dynamic collection configs now point toward:
+  - control account `collector`
+  - sample account `analyst`
+  - protected guest log root
+- Refactored the Agent planning layer from hard-coded branch selection to a registry-backed SOP/skill structure.
+- Added:
+  - `src/agent/registry.py`
+  - `docs/agent-sop-skill-registry.md`
+- The planner now emits:
+  - `selected_sop_id`
+  - `candidate_sop_ids`
+  - `llm_ready_prompt_input`
+- The workflow remains rule-driven for now, but the decision surface is now standardized for future OpenAI integration.
+- Extended the Agent layer from trace-only planning to executable planning state:
+  - added `agent_execution`
+  - persisted per-stage plans under `stage_plans`
+  - persisted structured `dynamic_request` for downstream execution
+- Extended the dynamic-analysis layer from a single fixed adapter path to candidate-based adapter selection:
+  - `sample_replay_adapter`
+  - `event_log_adapter`
+- Added the safe replay artifact convention under `staging/dynamic-replay/`.
+- Added the Chinese design document:
+  - `docs/agent-dynamic-sop-design.md`
 - Added project memory mechanism and persisted current experiment decisions.
 - Added project-root agent rules to make memory-first startup behavior explicit.
 - Recorded complete JSON output preference and stepwise execution progression.
@@ -199,3 +239,11 @@
 - Added experiment documentation:
   - `docs/static-analysis-experiment-record.md`
   - `docs/static-analysis-single-sample-trace.md`
+- Extended verdict integration:
+  - `src/verdict/service.py` now reads `static_analysis.v2` as an experimental static signal
+  - `configs/phase1.yaml` and `src/config/phase1_config.py` now include `enable_v2_verdict_signal`
+- Validated on a real single-sample workflow run:
+  - output file: `results/wf-20260501T105803Z-9d1b1d2e__fe81c5caa0e2__single.json`
+  - final label remained `malicious`
+  - final score increased to `0.42`
+  - decision basis now includes `Static v2 risk score=0.401 (medium)`

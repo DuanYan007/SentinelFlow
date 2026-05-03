@@ -1,3 +1,4 @@
+from .agent_execution import AgentDynamicRequest, AgentExecutionState
 from .agent_trace_item import AgentTraceItem
 from .analysis_context import AnalysisContext, create_empty_analysis_context
 from .batch_summary import BatchSummary
@@ -12,6 +13,8 @@ from .workflow_status import WorkflowStatus, create_default_workflow_status
 
 __all__ = [
     "AgentTraceItem",
+    "AgentDynamicRequest",
+    "AgentExecutionState",
     "AnalysisContext",
     "BatchSummary",
     "DynamicAnalysisResult",

@@ -4,6 +4,7 @@ __pycache__/
 results/
 logs/
 staging/
+data/
 configs/secrets/
 ransomware/
 .obsidian/

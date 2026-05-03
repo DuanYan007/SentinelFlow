@@ -45,6 +45,7 @@
   - file behavior
   - encryption-related behavior
   - destructive/system-impact behavior
+- Safe replay artifacts remain part of the chain, but the project has now also validated a real Windows VM collection route with VirtualBox, Sysmon, and Procmon.
 
 ### Evaluation
 - Main validation target:
@@ -146,6 +147,100 @@
   - writes per-sample JSON
   - writes batch summary JSON
 - VT querying has been validated with the local secret config.
+
+### Agent Orchestration Status
+- Agent planning is no longer trace-only.
+- A structured execution state is now part of the workflow context:
+  - `agent_execution.current_strategy`
+  - `agent_execution.stage_plans`
+  - `agent_execution.dynamic_request`
+- The current dynamic-request policy is:
+  - execution mode defaults to `safe_replay`
+  - host-side sample execution remains disabled
+  - adapter preference order is `sample_replay_adapter -> event_log_adapter`
+- Agent planning is also no longer fully hard-coded in service branches.
+- The decision space is now expressed through:
+  - a `skill registry`
+  - a `sop registry`
+  - per-stage `candidate_sop_ids`
+  - `selected_sop_id`
+  - `llm_ready_prompt_input`
+- This is the agreed bridge toward the future OpenAI-based decision brain:
+  - keep workflow execution rule-based for now
+  - standardize the decision surface first
+  - plug OpenAI into SOP selection later
+
+### Dynamic Adapter Status
+- Dynamic analysis now supports adapter candidate selection instead of a single fixed adapter.
+- Current adapters:
+  - `sample_replay_adapter`
+  - `event_log_adapter`
+- The `sample_replay_adapter` reads per-sample JSON artifacts from:
+  - `staging/dynamic-replay/<sha256>.dynamic.json`
+- This is the current minimum viable bridge between:
+  - Agent decision output
+  - dynamic-analysis execution
+  - future real sandbox export integration
+
+### Real Dynamic Collection Status
+- Real Windows VM dynamic collection has now crossed from planning into validated implementation.
+- Current validated pieces:
+  - VirtualBox host orchestration with `VBoxManage`
+  - guest export scripts under `guest-tools/virtualbox/`
+  - host copy-back into project-local storage
+  - raw log normalization and replay-artifact generation
+  - workflow auto-consumption of real dynamic logs
+- Current host-side source-of-truth directory:
+  - `data/<sample_sha256>/`
+- Current guest-side protected target directory after phase-1 hardening:
+  - `C:\ProgramData\SentinelFlow\Runs\<sample_sha256>\`
+
+### Dynamic Hardening Status
+- The project has adopted a first-stage split-control model:
+  - `collector` controls capture/export/copy-back
+  - `analyst` executes samples
+- `C:\Tools` is now intended to be:
+  - writable by `collector`
+  - read/execute only for `analyst`
+- Protected guest log storage is now intended to live under:
+  - `C:\ProgramData\SentinelFlow\Runs`
+
+### Dynamic Artifact Builder Status
+- Dynamic analysis now has an upstream artifact-production layer.
+- Current builder:
+  - `src/dynamic_analysis/artifact_builder.py`
+- Current supported conversion path:
+  - `dynamic-raw-log.v1 -> dynamic-replay.v1`
+- Current raw-log staging directory:
+  - `staging/dynamic-raw-logs/`
+- Current replay-artifact staging directory:
+  - `staging/dynamic-replay/`
+- This formalizes the split between:
+  - raw external sandbox/collector outputs
+  - normalized internal replay artifacts
+  - downstream dynamic-analysis scoring
+
+### Host Orchestration Status
+- Real dynamic execution now has a host-side orchestration skeleton.
+- Current components:
+  - `src/dynamic_collection/orchestrator.py`
+  - CLI command `run-real-dynamic-pipeline`
+  - shell wrapper `bin/run-real-dynamic-pipeline.sh`
+- Current behavior:
+  - supports dry-run planning
+  - supports optional command execution
+  - reads per-step command templates from dynamic config
+- Current limitation:
+  - the actual VM commands are not hard-coded and must be filled for the user's chosen platform
+
+### VirtualBox Lab Status
+- The first concrete platform choice is now fixed as the recommended real-execution path:
+  - `VirtualBox + Windows VM + Guest Additions + Sysmon + Procmon`
+- A dedicated config directory now exists:
+  - `configs/virtualbox-lab/`
+- Current VirtualBox config behavior:
+  - command templates are rendered as `echo VBoxManage ...` for safe dry-run validation
+  - the user can later remove `echo` to switch to real execution
 
 ### CLI Implementation Status
 - Implemented initial CLI module:
@@ -388,6 +483,24 @@
 - Added documentation artifacts:
   - `docs/static-analysis-experiment-record.md`
   - `docs/static-analysis-single-sample-trace.md`
+
+### Verdict V2 Signal Integration Status
+- Added phase-1 config switch:
+  - `enable_v2_verdict_signal`
+- Updated `src/verdict/service.py` so verdict generation now:
+  - reads `static_analysis.v2.risk_score` when available
+  - adds v2 score to `decision_basis`
+  - uses the stronger of v1/v2 static signals for verdict label mapping
+  - uses the stronger of v1/v2 static scores in final score aggregation
+- Validation status on one real single-sample workflow run:
+  - output file:
+    - `results/wf-20260501T105803Z-9d1b1d2e__fe81c5caa0e2__single.json`
+  - final label remained:
+    - `malicious`
+  - final score changed to:
+    - `0.42`
+  - decision basis now contains:
+    - `Static v2 risk score=0.401 (medium)`
 
 ### Collaboration Rule
 - Confirm with the user before writing implementation code

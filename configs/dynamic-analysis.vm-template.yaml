@@ -1,0 +1,33 @@
+enabled: true
+environment_type: windows_vm
+adapter_name: sample_replay_adapter
+snapshot_name: clean-baseline
+network_mode: host_only
+runner_command: ""
+event_log_path: ""
+replay_artifact_dir: staging/dynamic-replay
+real_runs_dir: data
+fallback_adapters:
+  - event_log_adapter
+allow_agent_override: true
+allow_sample_execution: false
+vm_platform: manual
+vm_name: windows-lab
+vm_guest_ip: 192.168.56.10
+vm_username: analyst
+vm_snapshot_restore_command: "echo restore {vm_name} snapshot for {sample_sha256}"
+vm_start_command: "echo start {vm_name}"
+vm_copy_sample_command: "echo copy {sample_path} to {vm_name}"
+vm_start_capture_command: "echo start capture on {vm_name}"
+vm_execute_sample_command: "echo execute sample {sample_sha256} on {vm_name}"
+vm_stop_capture_command: "echo stop capture on {vm_name}"
+vm_export_logs_command: "echo export logs on {vm_name} to guest temp"
+vm_collect_logs_command: "echo collect logs from {vm_name} into {run_dir}"
+observation_window_sec: 60
+process_event_enabled: true
+file_event_enabled: true
+bulk_create_threshold: 20
+bulk_modify_threshold: 20
+bulk_rename_threshold: 10
+high_write_density_threshold: medium
+timeout_sec: 90
