@@ -41,13 +41,6 @@ def run_verdict(context: AnalysisContext, bundle: RuntimeConfigBundle) -> Analys
     static_signal = _static_signal(context, bundle)
     static_v2_score = _static_v2_score(context) if bundle.phase1.enable_v2_verdict_signal else None
     static_v2_signal = _score_to_signal(static_v2_score, bundle) if static_v2_score is not None else "unknown"
-    dynamic_score = context.dynamic_analysis.risk_score
-    if dynamic_score >= bundle.static_analysis.high_score_threshold:
-        dynamic_signal = "high"
-    elif dynamic_score >= bundle.static_analysis.medium_score_threshold:
-        dynamic_signal = "medium"
-    else:
-        dynamic_signal = "low"
     decision_basis: list[str] = []
 
     if context.threat_intel.status == "ok" and context.threat_intel.matched:
@@ -64,10 +57,7 @@ def run_verdict(context: AnalysisContext, bundle: RuntimeConfigBundle) -> Analys
     decision_basis.append(f"Static risk score={context.static_analysis.risk_score:.3f} ({static_signal})")
     if static_v2_score is not None:
         decision_basis.append(f"Static v2 risk score={static_v2_score:.3f} ({static_v2_signal})")
-    if context.dynamic_analysis.status == "skipped":
-        decision_basis.append("Dynamic analysis was skipped by config")
-    else:
-        decision_basis.append(f"Dynamic risk score={dynamic_score:.3f} ({dynamic_signal})")
+    decision_basis.append("Dynamic analysis is not part of the active workflow.")
 
     has_static_indicators = bool(context.static_analysis.matched_features)
     effective_static_signal = static_signal
@@ -79,9 +69,9 @@ def run_verdict(context: AnalysisContext, bundle: RuntimeConfigBundle) -> Analys
         else:
             effective_static_signal = "low"
 
-    if vt_signal == "high" or effective_static_signal == "high" or dynamic_signal == "high":
+    if vt_signal == "high" or effective_static_signal == "high":
         label = FinalLabel.MALICIOUS.value
-    elif vt_signal == "medium" or effective_static_signal == "medium" or dynamic_signal == "medium":
+    elif vt_signal == "medium" or effective_static_signal == "medium":
         label = FinalLabel.SUSPICIOUS.value
     elif has_static_indicators:
         label = FinalLabel.SUSPICIOUS.value
@@ -95,16 +85,14 @@ def run_verdict(context: AnalysisContext, bundle: RuntimeConfigBundle) -> Analys
     if static_v2_score is not None:
         effective_static_score = max(effective_static_score, static_v2_score)
     final_score = round(
-        min(1.0, 0.3 * vt_score_map.get(vt_signal, 0.0) + 0.3 * effective_static_score + 0.4 * dynamic_score),
+        min(1.0, 0.4 * vt_score_map.get(vt_signal, 0.0) + 0.6 * effective_static_score),
         3,
     )
 
     context.verdict.final_label = label
     context.verdict.final_score = final_score
     context.verdict.decision_basis = decision_basis
-    context.verdict.explanation = (
-        "The current verdict is based on available threat-intelligence, static evidence, and dynamic evidence when configured."
-    )
+    context.verdict.explanation = "The current verdict is based on available threat-intelligence and static evidence."
 
     if context.workflow_status.status == WorkflowState.INITIALIZED.value:
         context.workflow_status.status = WorkflowState.COMPLETED_DEGRADED.value

@@ -51,7 +51,6 @@ def _build_summary(
     labels = Counter(context.verdict.final_label for context in contexts)
     workflow_statuses = Counter(context.workflow_status.status for context in contexts)
     static_statuses = Counter(context.static_analysis.status for context in contexts)
-    dynamic_statuses = Counter(context.dynamic_analysis.status for context in contexts)
     vt_statuses = Counter(context.threat_intel.status for context in contexts)
 
     completed = workflow_statuses.get("completed", 0) + workflow_statuses.get("completed_degraded", 0)
@@ -83,7 +82,6 @@ def _build_summary(
         module_stats={
             "vt": dict(vt_statuses),
             "static": dict(static_statuses),
-            "dynamic": dict(dynamic_statuses),
         },
         failure_stats={
             "workflow_statuses": dict(workflow_statuses),
@@ -131,4 +129,3 @@ def run_batch(
     )
     write_batch_summary(summary, f"{bundle.phase1.results_dir}/summaries")
     return summary
-

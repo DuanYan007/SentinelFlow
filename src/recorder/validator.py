@@ -56,7 +56,6 @@ def validate_result_dict(data: dict) -> ValidationResult:
     agent_execution = _require_mapping(data, "agent_execution", errors)
     _require_list(data, "agent_trace", errors)
     static_analysis = _require_mapping(data, "static_analysis", errors)
-    dynamic_analysis = _require_mapping(data, "dynamic_analysis", errors)
     verdict = _require_mapping(data, "verdict", errors)
     runtime = _require_mapping(data, "runtime", errors)
     workflow_status = _require_mapping(data, "workflow_status", errors)
@@ -89,12 +88,6 @@ def validate_result_dict(data: dict) -> ValidationResult:
                 errors.append("static_analysis.v2.summary must be an object")
             if "risk_score" in v2 and not isinstance(v2.get("risk_score"), (int, float)):
                 errors.append("static_analysis.v2.risk_score must be numeric")
-    if dynamic_analysis and "status" not in dynamic_analysis:
-        errors.append("dynamic_analysis.status is required")
-    if dynamic_analysis and "adapter_candidates" in dynamic_analysis and not isinstance(
-        dynamic_analysis.get("adapter_candidates"), list
-    ):
-        errors.append("dynamic_analysis.adapter_candidates must be a list")
     if verdict:
         if verdict.get("final_label") not in {"malicious", "suspicious", "benign"}:
             errors.append("verdict.final_label must be malicious/suspicious/benign")

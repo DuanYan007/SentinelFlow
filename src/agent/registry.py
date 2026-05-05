@@ -39,14 +39,6 @@ def get_skill_registry() -> dict[str, AgentSkillDefinition]:
             skill_id="static-pe-triage",
             description="Interpret PE static evidence and score suspicious indicators.",
         ),
-        "dynamic-behavior-triage": AgentSkillDefinition(
-            skill_id="dynamic-behavior-triage",
-            description="Interpret dynamic behavior evidence and summarize impact.",
-        ),
-        "safe-replay-loader": AgentSkillDefinition(
-            skill_id="safe-replay-loader",
-            description="Load sample-specific dynamic replay artifacts without executing malware.",
-        ),
         "verdict-summarizer": AgentSkillDefinition(
             skill_id="verdict-summarizer",
             description="Summarize multi-stage evidence into the final conclusion.",
@@ -70,46 +62,17 @@ def get_sop_registry() -> dict[str, AgentSOPDefinition]:
                 "preserve_full_chain": True,
             },
         ),
-        "static_to_safe_replay": AgentSOPDefinition(
-            sop_id="static_to_safe_replay",
+        "static_to_verdict": AgentSOPDefinition(
+            sop_id="static_to_verdict",
             stage=WorkflowStage.STATIC_ANALYSIS.value,
-            objective="Interpret static evidence and route the sample into the dynamic branch.",
-            description="Prefer structured static evidence, then request a safe replay artifact for dynamic follow-up.",
-            selected_skills=["project-memory", "static-pe-triage", "safe-replay-loader"],
-            selected_tools=["pefile", "strings", "die", "rule_based_agent"],
-            suggested_next_action="collect_more_static_and_dynamic_evidence",
-            rationale="Static evidence should be carried into a safe dynamic follow-up path before real sandbox execution exists.",
-            execution_defaults={
-                "workflow_transition": "dynamic_analysis",
-                "dynamic_mode": "safe_replay",
-            },
-        ),
-        "static_minimum_dynamic_path": AgentSOPDefinition(
-            sop_id="static_minimum_dynamic_path",
-            stage=WorkflowStage.STATIC_ANALYSIS.value,
-            objective="Interpret static evidence and keep the minimum dynamic branch alive.",
-            description="Use the minimum dynamic path when static evidence is weak but the phase-1 full-chain policy still applies.",
+            objective="Interpret static evidence and route the sample into the verdict stage.",
+            description="Use structured static evidence as the final technical branch in the active workflow.",
             selected_skills=["project-memory", "static-pe-triage"],
-            selected_tools=["pefile", "strings", "rule_based_agent"],
-            suggested_next_action="keep_minimum_dynamic_path",
-            rationale="Phase 1 still exercises the dynamic branch even when static evidence is limited.",
-            execution_defaults={
-                "workflow_transition": "dynamic_analysis",
-                "dynamic_mode": "safe_replay",
-            },
-        ),
-        "dynamic_replay_to_verdict": AgentSOPDefinition(
-            sop_id="dynamic_replay_to_verdict",
-            stage=WorkflowStage.DYNAMIC_ANALYSIS.value,
-            objective="Interpret dynamic behavior evidence and decide whether verdict evidence is sufficient.",
-            description="Consume replay or event-log evidence, then move the workflow to the verdict stage.",
-            selected_skills=["project-memory", "dynamic-behavior-triage"],
-            selected_tools=["sample_replay_adapter", "event_log_adapter", "rule_based_agent"],
-            suggested_next_action="produce_final_verdict",
-            rationale="The current phase-1 workflow emits the final result after the dynamic branch.",
+            selected_tools=["pefile", "strings", "die", "rule_based_agent"],
+            suggested_next_action="continue_to_verdict",
+            rationale="Dynamic analysis is currently disabled in the active workflow, so static evidence feeds directly into verdict.",
             execution_defaults={
                 "workflow_transition": "final_verdict",
-                "allow_missing_dynamic_artifact": True,
             },
         ),
         "final_verdict_emit": AgentSOPDefinition(

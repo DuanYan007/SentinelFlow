@@ -5,11 +5,9 @@ from core.constants import DEFAULT_CONFIGS_DIR
 from core.enums import FinalLabel, ModuleStatus, WorkflowStage, WorkflowState
 from core.time_utils import duration_seconds, now_iso
 from config.loader import RuntimeConfigBundle, load_runtime_config
-from dynamic_collection import prepare_real_dynamic_artifacts
 from ingest import run_ingest
 from intel import run_threat_intel
 from models.analysis_context import AnalysisContext, create_empty_analysis_context
-from dynamic_analysis import run_dynamic_analysis
 from recorder.result_writer import write_single_result
 from static_analysis import run_static_analysis
 from verdict import run_verdict
@@ -45,17 +43,6 @@ def single_sample_workflow(sample_path: str, runtime_config: RuntimeConfigBundle
 
     context = run_static_analysis(context, runtime_config)
     context = run_agent_decision(context, WorkflowStage.STATIC_ANALYSIS.value)
-
-    if runtime_config.dynamic_analysis.real_runs_dir:
-        real_dynamic_prep = prepare_real_dynamic_artifacts(context, runtime_config)
-        context.runtime.notes = (
-            f"{context.runtime.notes}; {real_dynamic_prep.summary}".strip("; ").strip()
-            if real_dynamic_prep.summary
-            else context.runtime.notes
-        )
-
-    context = run_dynamic_analysis(context, runtime_config)
-    context = run_agent_decision(context, WorkflowStage.DYNAMIC_ANALYSIS.value)
 
     context = run_verdict(context, runtime_config)
     context = run_agent_decision(context, WorkflowStage.FINAL_VERDICT.value)

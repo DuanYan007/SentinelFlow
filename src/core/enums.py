@@ -20,7 +20,6 @@ class WorkflowStage(str, Enum):
     SAMPLE_INGEST = "sample_ingest"
     HASH_INTEL = "hash_intel"
     STATIC_ANALYSIS = "static_analysis"
-    DYNAMIC_ANALYSIS = "dynamic_analysis"
     FINAL_VERDICT = "final_verdict"
 
 
@@ -28,4 +27,3 @@ class FinalLabel(str, Enum):
     MALICIOUS = "malicious"
     SUSPICIOUS = "suspicious"
     BENIGN = "benign"
-

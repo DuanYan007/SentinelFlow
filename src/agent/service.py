@@ -43,18 +43,8 @@ def _materialize_plan(context: AnalysisContext, stage: str) -> tuple[AnalysisCon
         "suggested_next_action": plan.suggested_next_action,
         "rationale": plan.rationale,
         "llm_ready_prompt_input": plan.llm_ready_prompt_input,
-        "execution_directives": {
-            key: (
-                value.__dict__
-                if hasattr(value, "__dict__") and value.__class__.__name__ == "AgentDynamicRequest"
-                else value
-            )
-            for key, value in plan.execution_directives.items()
-        },
+        "execution_directives": dict(plan.execution_directives),
     }
-    dynamic_request = plan.execution_directives.get("dynamic_request")
-    if dynamic_request is not None:
-        context.agent_execution.dynamic_request = dynamic_request
     return context, plan
 
 
@@ -90,17 +80,17 @@ def run_agent_decision(context: AnalysisContext, stage: str) -> AnalysisContext:
         )
         if isinstance(v2_risk_score, (int, float)):
             if v2_risk_score >= 0.60:
-                next_action = "prioritize_dynamic_analysis"
-                next_reason = "Static-analysis v2 shows high structured risk and should drive stronger follow-up."
+                next_action = "continue_to_verdict"
+                next_reason = "Static-analysis v2 shows high structured risk and should directly influence the verdict."
             elif v2_risk_score >= 0.30:
-                next_action = "collect_more_static_and_dynamic_evidence"
-                next_reason = "Static-analysis v2 shows medium structured risk and suggests broader evidence collection."
+                next_action = "continue_to_verdict"
+                next_reason = "Static-analysis v2 shows medium structured risk and should directly influence the verdict."
             else:
-                next_action = "keep_minimum_dynamic_path"
-                next_reason = "Static-analysis v2 remains low-risk and can continue through the minimum dynamic path."
+                next_action = "continue_to_verdict"
+                next_reason = "Static-analysis v2 remains low-risk and the active workflow still moves directly to verdict."
         else:
             next_action = "v2_unavailable"
-            next_reason = "Static-analysis v2 output is unavailable, so the agent falls back to the v1-compatible path."
+            next_reason = "Static-analysis v2 output is unavailable, so the agent falls back to the static-only path."
 
         input_summary = {
             "static_status": context.static_analysis.status,
@@ -115,7 +105,6 @@ def run_agent_decision(context: AnalysisContext, stage: str) -> AnalysisContext:
             "candidate_sop_ids": plan.candidate_sop_ids,
             "selected_skills": plan.selected_skills,
             "selected_tools": plan.selected_tools,
-            "dynamic_request": context.agent_execution.dynamic_request.__dict__,
         }
         _append_trace(
             context,
@@ -129,35 +118,10 @@ def run_agent_decision(context: AnalysisContext, stage: str) -> AnalysisContext:
         )
         return context
 
-    if stage == WorkflowStage.DYNAMIC_ANALYSIS.value:
-        context, plan = _materialize_plan(context, stage)
-        input_summary = {
-            "dynamic_status": context.dynamic_analysis.status,
-            "dynamic_risk_score": context.dynamic_analysis.risk_score,
-            "dynamic_matched_features": context.dynamic_analysis.matched_features,
-            "agent_objective": plan.objective,
-            "strategy_name": plan.strategy_name,
-            "selected_sop_id": plan.selected_sop_id,
-            "candidate_sop_ids": plan.candidate_sop_ids,
-            "selected_skills": plan.selected_skills,
-            "selected_tools": plan.selected_tools,
-            "dynamic_adapter_selected": context.dynamic_analysis.adapter_selected,
-        }
-        _append_trace(
-            context,
-            stage="agent_decision_3",
-            decision=plan.suggested_next_action,
-            reason=plan.rationale,
-            input_summary=input_summary,
-            confidence=0.72,
-        )
-        return context
-
     if stage == WorkflowStage.FINAL_VERDICT.value:
         context, plan = _materialize_plan(context, stage)
         input_summary = {
             "static_status": context.static_analysis.status,
-            "dynamic_status": context.dynamic_analysis.status,
             "workflow_status": context.workflow_status.status,
             "verdict_label": context.verdict.final_label,
             "strategy_name": plan.strategy_name,

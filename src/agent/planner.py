@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 
 from core.enums import WorkflowStage
 from models.analysis_context import AnalysisContext
-from models.agent_execution import AgentDynamicRequest
 from .registry import AgentSOPDefinition, get_sops_for_stage
 
 
@@ -21,20 +20,6 @@ class AgentPlan:
     selected_sop_id: str = ""
     candidate_sop_ids: list[str] = field(default_factory=list)
     llm_ready_prompt_input: dict = field(default_factory=dict)
-
-
-def _build_dynamic_request(context: AnalysisContext) -> AgentDynamicRequest:
-    sample_hash = context.sample.sha256
-    replay_name = f"{sample_hash}.dynamic.json" if sample_hash else ""
-    return AgentDynamicRequest(
-        execution_mode="safe_replay",
-        allow_sample_execution=False,
-        preferred_adapter="sample_replay_adapter",
-        fallback_adapters=["event_log_adapter"],
-        input_artifact_path=replay_name,
-        continue_on_unavailable=True,
-    )
-
 
 def _build_llm_ready_prompt_input(context: AnalysisContext, stage: str, candidate_sops: list[AgentSOPDefinition]) -> dict:
     v2 = context.static_analysis.v2 if isinstance(context.static_analysis.v2, dict) else {}
@@ -57,11 +42,6 @@ def _build_llm_ready_prompt_input(context: AnalysisContext, stage: str, candidat
             "matched_features": context.static_analysis.matched_features,
             "v2_risk_score": v2.get("risk_score"),
         },
-        "dynamic_analysis": {
-            "status": context.dynamic_analysis.status,
-            "risk_score": context.dynamic_analysis.risk_score,
-            "matched_features": context.dynamic_analysis.matched_features,
-        },
         "candidate_sops": [
             {
                 "sop_id": sop.sop_id,
@@ -83,8 +63,6 @@ def _plan_from_sop(
     rationale_override: str | None = None,
 ) -> AgentPlan:
     execution_directives = dict(sop.execution_defaults)
-    if sop.stage == WorkflowStage.STATIC_ANALYSIS.value:
-        execution_directives["dynamic_request"] = _build_dynamic_request(context)
     candidate_sops = get_sops_for_stage(sop.stage)
     return AgentPlan(
         stage=sop.stage,
@@ -107,33 +85,26 @@ def build_agent_plan(context: AnalysisContext, stage: str) -> AgentPlan:
         return _plan_from_sop(context, sop)
 
     if stage == WorkflowStage.STATIC_ANALYSIS.value:
-        high_followup_sop = next(sop for sop in get_sops_for_stage(stage) if sop.sop_id == "static_to_safe_replay")
-        minimum_followup_sop = next(
-            sop for sop in get_sops_for_stage(stage) if sop.sop_id == "static_minimum_dynamic_path"
-        )
+        followup_sop = next(sop for sop in get_sops_for_stage(stage) if sop.sop_id == "static_to_verdict")
         v2 = context.static_analysis.v2 if isinstance(context.static_analysis.v2, dict) else {}
         v2_score = v2.get("risk_score")
         if isinstance(v2_score, (int, float)) and v2_score >= 0.30:
             return _plan_from_sop(
                 context,
-                high_followup_sop,
-                action_override="collect_more_static_and_dynamic_evidence",
+                followup_sop,
+                action_override="continue_to_verdict",
                 rationale_override=(
-                    "Static-analysis v2 indicates that the sample deserves broader follow-up evidence collection."
+                    "Static-analysis v2 indicates elevated risk, and the active workflow moves directly to verdict."
                 ),
             )
         return _plan_from_sop(
             context,
-            minimum_followup_sop,
-            action_override="keep_minimum_dynamic_path",
+            followup_sop,
+            action_override="continue_to_verdict",
             rationale_override=(
-                "Static-analysis evidence is present, but the minimum dynamic path remains sufficient for phase 1."
+                "Static-analysis evidence is present, and the active workflow moves directly to verdict."
             ),
         )
-
-    if stage == WorkflowStage.DYNAMIC_ANALYSIS.value:
-        sop = next(sop for sop in get_sops_for_stage(stage) if sop.sop_id == "dynamic_replay_to_verdict")
-        return _plan_from_sop(context, sop)
 
     if stage == WorkflowStage.FINAL_VERDICT.value:
         sop = next(sop for sop in get_sops_for_stage(stage) if sop.sop_id == "final_verdict_emit")
